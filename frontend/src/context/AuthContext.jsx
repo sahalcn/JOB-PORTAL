@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 
 export const AuthContext = createContext();
 
@@ -7,8 +7,15 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token') || '');
 
-  // Backend API Base URL
-  const API_URL = 'http://localhost:5000/api';
+  // Backend API URL — reads from VITE_API_URL env var (set in Render dashboard for production)
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    setToken('');
+    setUser(null);
+  }, []);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -24,15 +31,22 @@ export const AuthProvider = ({ children }) => {
             Authorization: `Bearer ${token}`,
           },
         });
+
+        // Only logout on explicit 401 (invalid/expired token), NOT on network errors
+        if (res.status === 401) {
+          logout();
+          setLoading(false);
+          return;
+        }
+
         const data = await res.json();
         if (data.success) {
           setUser(data.data);
-        } else {
-          logout();
         }
+        // If server error (500 etc.), keep existing session — don't logout
       } catch (err) {
-        console.error('Error fetching user profile', err);
-        logout();
+        // Network error — backend may be temporarily down; do NOT logout user
+        console.warn('Could not reach server to verify profile. Will retry on next action.');
       }
       setLoading(false);
     };
@@ -57,7 +71,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data.message };
       }
     } catch (err) {
-      return { success: false, message: 'Server connection failed' };
+      return { success: false, message: 'Cannot connect to server. Please make sure the backend is running on port 5000.' };
     }
   };
 
@@ -78,14 +92,11 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data.message };
       }
     } catch (err) {
-      return { success: false, message: 'Server connection failed' };
+      return {
+        success: false,
+        message: 'Cannot connect to server. Please make sure the backend is running on port 5000.',
+      };
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken('');
-    setUser(null);
   };
 
   const updateProfile = async (profileData) => {
@@ -101,7 +112,7 @@ export const AuthProvider = ({ children }) => {
       const data = await res.json();
       if (data.success) {
         setUser(data.data);
-        return { success: true };
+        return { success: true, data: data.data };
       } else {
         return { success: false, message: data.message };
       }
