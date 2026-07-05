@@ -18,9 +18,17 @@ const NavigationBar = () => {
 
   useEffect(() => {
     if (token) {
-      fetchNotifications();
-      const interval = setInterval(fetchNotifications, 10000); // Poll notifications every 10s
-      return () => clearInterval(interval);
+      // Small delay so backend finishes processing registration before first poll
+      const initialDelay = setTimeout(() => {
+        fetchNotifications();
+      }, 1500);
+      const interval = setInterval(fetchNotifications, 15000); // Poll every 15s
+      return () => {
+        clearTimeout(initialDelay);
+        clearInterval(interval);
+      };
+    } else {
+      setNotifications([]);
     }
   }, [token]);
 
@@ -29,12 +37,14 @@ const NavigationBar = () => {
       const res = await fetch(`${API_URL}/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) return; // Server error — silently skip, do not crash UI
       const data = await res.json();
       if (data.success) setNotifications(data.data);
     } catch (err) {
-      console.error('Error fetching notifications', err);
+      // Network error — silently ignore, will retry on next interval
     }
   };
+
 
   const markNotificationsRead = async () => {
     setShowNotifications(!showNotifications);
@@ -61,7 +71,7 @@ const NavigationBar = () => {
   return (
     <nav className="navbar">
       <Link to="/" className="logo">
-        🚀 JobSphere <span style={{ fontSize: '0.9rem', color: 'var(--accent)', fontWeight: 500 }}>AI Portal</span>
+        ◈ Job<span>Sphere</span>
       </Link>
 
       <div className="nav-links">
@@ -69,66 +79,64 @@ const NavigationBar = () => {
         {user ? (
           <>
             <Link to="/dashboard" className="nav-link">Dashboard</Link>
-            
-            {/* Notification Pane */}
+
+            {/* Notification Bell */}
             <div style={{ position: 'relative' }}>
-              <button 
-                onClick={markNotificationsRead}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.25rem', display: 'flex', alignItems: 'center' }}
-              >
-                <FaBell />
+              <button className="notif-btn" onClick={markNotificationsRead} title="Notifications">
+                <FaBell size={15} />
                 {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
               </button>
 
               {showNotifications && (
-                <div style={{
-                  position: 'absolute', right: 0, top: '2.5rem', width: '320px', 
-                  backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', 
-                  borderRadius: '12px', padding: '1rem', zIndex: 1000, boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
-                }}>
-                  <h4 style={{ marginBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                    Notifications
-                  </h4>
-                  {notifications.length === 0 ? (
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>No notifications</p>
-                  ) : (
-                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-                      {notifications.map((notif) => (
-                        <div key={notif._id} style={{ 
-                          fontSize: '0.8rem', padding: '0.5rem 0', 
-                          borderBottom: '1px solid rgba(255,255,255,0.05)', 
-                          color: notif.isRead ? 'var(--text-secondary)' : '#fff',
-                          fontWeight: notif.isRead ? 'normal' : '600'
-                        }}>
-                          {notif.message}
-                          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(notif.createdAt).toLocaleTimeString()}</p>
+                <div className="notif-dropdown">
+                  <div className="notif-header">
+                    <span>Notifications</span>
+                    {unreadCount > 0 && <span className="badge badge-info">{unreadCount} new</span>}
+                  </div>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        All caught up! No notifications.
+                      </div>
+                    ) : (
+                      notifications.map((notif) => (
+                        <div key={notif._id} className={`notif-item ${!notif.isRead ? 'unread' : ''}`}>
+                          <p style={{ fontSize: '0.82rem', color: notif.isRead ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
+                            {notif.message}
+                          </p>
+                          <div className="notif-time">{new Date(notif.createdAt).toLocaleString()}</div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ))
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Profile tag info */}
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <FaUser style={{ color: 'var(--primary)' }} /> {user.name} ({user.role})
-            </span>
+            {/* User pill */}
+            <div className="nav-user-tag">
+              <FaUser size={11} style={{ color: 'var(--primary)' }} />
+              <span>{user.name}</span>
+              <span className="badge badge-info" style={{ fontSize: '0.7rem', padding: '0.1rem 0.45rem' }}>{user.role}</span>
+            </div>
 
-            <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}>
-              <FaSignOutAlt /> Sign Out
+            <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.45rem 0.9rem', fontSize: '0.85rem' }}>
+              <FaSignOutAlt size={13} /> Sign Out
             </button>
           </>
         ) : (
           <>
             <Link to="/login" className="nav-link">Sign In</Link>
-            <Link to="/register" className="btn btn-primary" style={{ padding: '0.5rem 1rem' }}>Register</Link>
+            <Link to="/register" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.88rem' }}>
+              Get Started
+            </Link>
           </>
         )}
       </div>
     </nav>
   );
 };
+
 
 // Route Redirector based on user role
 const ProtectedDashboard = () => {

@@ -6,13 +6,16 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     const res = await login(email, password);
+    setLoading(false);
     if (res.success) {
       navigate('/dashboard');
     } else {
@@ -22,15 +25,26 @@ const Login = () => {
 
   return (
     <div className="form-container">
-      <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Sign In</h2>
-      {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>◈</div>
+        <h2>Welcome Back</h2>
+        <p className="form-subtitle">Sign in to your JobSphere account</p>
+      </div>
+
+      {error && (
+        <div className="alert alert-danger">
+          ⚠ {error}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Email Address</label>
           <input
+            id="login-email"
             type="email"
             className="form-control"
-            placeholder="Enter your email"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -39,6 +53,7 @@ const Login = () => {
         <div className="form-group">
           <label>Password</label>
           <input
+            id="login-password"
             type="password"
             className="form-control"
             placeholder="Enter your password"
@@ -47,12 +62,23 @@ const Login = () => {
             required
           />
         </div>
-        <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-          Sign In
+        <button
+          id="login-submit"
+          type="submit"
+          className="btn btn-primary"
+          style={{ width: '100%', marginTop: '0.5rem', padding: '0.8rem' }}
+          disabled={loading}
+        >
+          {loading ? 'Signing in...' : 'Sign In →'}
         </button>
       </form>
-      <p style={{ marginTop: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-        Don't have an account? <Link to="/register" style={{ color: 'var(--primary)' }}>Register Here</Link>
+
+      <div className="divider" />
+      <p style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+        Don't have an account?{' '}
+        <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>
+          Create one free
+        </Link>
       </p>
     </div>
   );
