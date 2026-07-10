@@ -58,10 +58,59 @@ const parseResumeText = (text) => {
   }
 
   return {
-    skills: foundSkills,
+    skills: Array.from(new Set(foundSkills)),
     experience,
     education
   };
+};
+
+// @desc    Parse resume text and update seeker profile
+// @route   POST /api/applications/parse-resume
+// @access  Private (Job Seeker)
+export const parseResume = async (req, res) => {
+  try {
+    const { resumeText } = req.body;
+    
+    if (!resumeText) {
+      return res.status(400).json({ success: false, message: 'Please provide resume text' });
+    }
+
+    // Run our parsing logic
+    const extractedData = parseResumeText(resumeText);
+
+    // Get the user from db
+    const user = await User.findById(req.user._id);
+    
+    if (!user) {
+       return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Update their profile intelligently
+    const newSkills = Array.from(new Set([...(user.profile.skills || []), ...extractedData.skills]));
+    
+    user.profile = {
+      ...user.profile,
+      skills: newSkills,
+      experience: extractedData.experience || user.profile.experience,
+      education: extractedData.education !== 'Not specified' ? extractedData.education : user.profile.education,
+      bio: user.profile.bio || 'AI Extracted Profile'
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        skills: extractedData.skills,
+        experience: extractedData.experience,
+        education: extractedData.education,
+        profile: user.profile
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 // @desc    Apply for a job (including resume upload/parsing simulation)

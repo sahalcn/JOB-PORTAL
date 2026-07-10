@@ -8,7 +8,8 @@ import {
   scheduleInterview,
   getAssessmentQuestions,
   submitAssessment,
-  getMatchingJobs
+  getMatchingJobs,
+  parseResume
 } from '../controllers/applicationController.js';
 import { protect, authorize } from '../middlewares/authMiddleware.js';
 
@@ -26,6 +27,9 @@ const storage = multer.diskStorage({
     );
   },
 });
+
+// Resume Parsing Route
+router.post('/parse-resume', protect, authorize('Job Seeker'), parseResume);
 
 const upload = multer({
   storage,

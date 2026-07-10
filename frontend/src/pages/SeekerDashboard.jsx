@@ -101,7 +101,7 @@ const SeekerDashboard = () => {
     }
     setParseStatus('Parsing with AI Engine...');
     try {
-      const res = await fetch(`${API_URL}/applications/apply/fake-resume-id-only`, {
+      const res = await fetch(`${API_URL}/applications/parse-resume`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,40 +109,26 @@ const SeekerDashboard = () => {
         },
         body: JSON.stringify({ resumeText })
       });
-      // We hit application route with dummy jobId or custom parser route. Let's make sure it handles it or we mock parse locally
-      const mockParseSkills = ['react', 'node', 'express', 'mongodb', 'javascript', 'python', 'java', 'git', 'sql', 'html', 'css', 'typescript', 'docker', 'aws']
-        .filter(s => resumeText.toLowerCase().includes(s));
       
-      let mockExp = 0;
-      const match = resumeText.toLowerCase().match(/(\d+)\s*(?:\+)?\s*year[s]?/);
-      if (match) mockExp = parseInt(match[1]);
+      const data = await res.json();
 
-      const mockEd = resumeText.toLowerCase().includes('bachelor') ? 'Bachelor\'s Degree' :
-                     resumeText.toLowerCase().includes('master') ? 'Master\'s Degree' : 'Not specified';
+      if (data.success) {
+        setBio(data.data.profile.bio);
+        setExperience(data.data.profile.experience);
+        setEducation(data.data.profile.education);
+        setSkillsInput(data.data.profile.skills.join(', '));
+        
+        // Let the AuthContext know the user profile changed
+        await updateProfile({ profile: data.data.profile });
 
-      const updateRes = await updateProfile({
-        name: user.name,
-        profile: {
-          bio: user.profile.bio || 'AI Extracted Profile',
-          experience: mockExp || user.profile.experience,
-          education: mockEd || user.profile.education,
-          skills: Array.from(new Set([...user.profile.skills, ...mockParseSkills]))
-        }
-      });
-
-      if (updateRes.success) {
-        setBio(updateRes.data.profile.bio);
-        setExperience(updateRes.data.profile.experience);
-        setEducation(updateRes.data.profile.education);
-        setSkillsInput(updateRes.data.profile.skills.join(', '));
         setParseStatus('Successfully parsed & profile updated!');
         showStatus('Resume details extracted!');
         fetchRecommendedJobs();
       } else {
-        setParseStatus('Parsing failed.');
+        setParseStatus(`Parsing failed: ${data.message}`);
       }
     } catch (err) {
-      setParseStatus('Parsing complete. Extracted text successfully saved to profile.');
+      setParseStatus('Network error while parsing resume.');
     }
   };
 
