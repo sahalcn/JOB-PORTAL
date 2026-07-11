@@ -7,8 +7,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token') || '');
 
-  // Backend API URL — reads from VITE_API_URL env var (set in Render dashboard for production)
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  // Backend API URL — reads VITE_API_URL env var, falls back to live Render backend
+  const API_URL = import.meta.env.VITE_API_URL || 'https://job-portal-1-7vfg.onrender.com/api';
 
 
   const logout = useCallback(() => {
@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data.message };
       }
     } catch (err) {
-      return { success: false, message: 'Cannot connect to server. Please make sure the backend is running on port 5000.' };
+      return { success: false, message: 'Network error. Cannot connect to the server right now.' };
     }
   };
 
@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       return {
         success: false,
-        message: 'Cannot connect to server. Please make sure the backend is running on port 5000.',
+        message: 'Network error. Cannot connect to the server right now (Render might be waking up).',
       };
     }
   };
