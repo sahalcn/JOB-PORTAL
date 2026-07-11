@@ -23,7 +23,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
-  process.env.FRONTEND_URL, // Set this in Render env vars if you deploy the frontend too
+  'https://job-portal-five-hazel.vercel.app', // Vercel deployment
+  process.env.FRONTEND_URL, // Additional frontend URL from Render env vars
 ].filter(Boolean);
 
 const corsOptions = {
